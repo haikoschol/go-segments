@@ -41,6 +41,10 @@ func (app *NewrelicApplication) Handler(next http.Handler) http.Handler {
 	})
 }
 
+func (app *NewrelicApplication) RecordCustomEvent(eventType string, params map[string]interface{}) error {
+	return app.newrelic.RecordCustomEvent(eventType, params)
+}
+
 type NewrelicDatastoreSegment struct {
 	s newrelic.DatastoreSegment
 }
