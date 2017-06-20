@@ -2,8 +2,9 @@ package segments
 
 import (
 	"context"
-	"github.com/newrelic/go-agent"
 	"net/http"
+
+	"github.com/newrelic/go-agent"
 )
 
 type Segment interface {
@@ -20,6 +21,10 @@ type NewrelicApplication struct {
 	newrelic newrelic.Application
 }
 
+type contextKey string
+
+var NewrelicTransactionContextKey contextKey = "newrelicTransaction"
+
 func NewNewrelicApplication(name string, key string) (*NewrelicApplication, error) {
 	nr, err := newrelic.NewApplication(newrelic.NewConfig(name, key))
 	if err != nil {
@@ -34,7 +39,7 @@ func (app *NewrelicApplication) Handler(next http.Handler) http.Handler {
 		txn := app.newrelic.StartTransaction(r.URL.Path, w, r)
 		defer txn.End()
 
-		ctx := context.WithValue(r.Context(), "newrelicTransaction", txn)
+		ctx := context.WithValue(r.Context(), NewrelicTransactionContextKey, txn)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
@@ -55,7 +60,7 @@ func StartDatabaseSegment(r *http.Request, table string, operation string) Segme
 		return NopSegment{}
 	}
 	ctx := r.Context()
-	newrelicTransaction, ok := ctx.Value("newrelicTransaction").(newrelic.Transaction)
+	newrelicTransaction, ok := ctx.Value(NewrelicTransactionContextKey).(newrelic.Transaction)
 
 	if !ok {
 		return NopSegment{}
@@ -74,7 +79,7 @@ func StartRedisSegment(r *http.Request, operation string, key string) Segment {
 		return NopSegment{}
 	}
 	ctx := r.Context()
-	newrelicTransaction, ok := ctx.Value("newrelicTransaction").(newrelic.Transaction)
+	newrelicTransaction, ok := ctx.Value(NewrelicTransactionContextKey).(newrelic.Transaction)
 
 	if !ok {
 		return NopSegment{}
@@ -107,7 +112,7 @@ func StartExternalSegment(r *http.Request, req *http.Request) Segment {
 		return NopSegment{}
 	}
 	ctx := r.Context()
-	newrelicTransaction, ok := ctx.Value("newrelicTransaction").(newrelic.Transaction)
+	newrelicTransaction, ok := ctx.Value(NewrelicTransactionContextKey).(newrelic.Transaction)
 
 	if !ok {
 		return NopSegment{}
@@ -130,7 +135,7 @@ func StartSegment(r *http.Request, name string) Segment {
 		return NopSegment{}
 	}
 	ctx := r.Context()
-	newrelicTransaction, ok := ctx.Value("newrelicTransaction").(newrelic.Transaction)
+	newrelicTransaction, ok := ctx.Value(NewrelicTransactionContextKey).(newrelic.Transaction)
 	if !ok {
 		return NopSegment{}
 	}
@@ -144,7 +149,7 @@ func AddAttribute(r *http.Request, key string, value string) {
 		return
 	}
 	ctx := r.Context()
-	newrelicTransaction, ok := ctx.Value("newrelicTransaction").(newrelic.Transaction)
+	newrelicTransaction, ok := ctx.Value(NewrelicTransactionContextKey).(newrelic.Transaction)
 	if !ok {
 		return
 	}
